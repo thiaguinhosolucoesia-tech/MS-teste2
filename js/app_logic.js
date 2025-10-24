@@ -691,11 +691,11 @@ const renderTimeline = (pedido) => {
        const userDisplay = log.user || 'Sistema'; // Default to 'Sistema' if user not logged
        return `
        <div class="timeline-item ${log.type === 'status' ? 'timeline-item-status' : 'timeline-item-log'}">
-           {/* Timeline Icon */}
+           
            <div class="timeline-icon ${iconColor}">
                <i class='bx ${iconClass}'></i>
            </div>
-           {/* Log Content Bubble */}
+           
            <div class="bg-white p-3 rounded-lg shadow-sm border border-gray-200 ml-2 relative">
                <div class="flex justify-between items-start mb-1 gap-2">
                    <h4 class="font-semibold text-gray-700 text-sm flex-grow">${userDisplay}</h4>
@@ -973,7 +973,7 @@ const getGeminiSuggestions = async (pedidoAtual, itensAtuais) => {
                 contents: [{ role: "user", parts: [{ text: prompt }] }], // Corrigido para o formato v1
                 // Safety settings (adjust if blocking valid responses)
                 safetySettings: [ { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" }, { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" }, { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" }, { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" } ],
-                generationConfig: { temperature: 0.6, maxOutputTokens: 512 } // Control creativity/length (Aumentado para evitar MAX_TOKENS)
+                generationConfig: { temperature: 0.6, maxOutputTokens: 1024 } // Control creativity/length (Aumentado para evitar MAX_TOKENS)
             })
         });
 
