@@ -279,8 +279,13 @@ const saveLogAndUploads = async (e) => {
             const mediaRef = db.ref(`pedidos/${pedidoId}/media`);
             console.log(`Salvando ${mediaResults.length} referências de mídia no Firebase em /pedidos/${pedidoId}/media ...`);
             for (const result of mediaResults) {
-                await mediaRef.push().set(result); // Add each media object under the 'media' node
-                console.log(`Referência para ${result.name} salva no Firebase.`);
+                // IMPORTANT: Only push to Firebase if the result is a valid object (not a simple URL string, which era o erro anterior)
+                if (result && typeof result === 'object' && result.url) {
+                    await mediaRef.push().set(result); // Add each media object under the 'media' node
+                    console.log(`Referência para ${result.name} salva no Firebase.`);
+                } else {
+                    console.warn("Resultado de upload inválido ou incompleto, ignorando salvamento no Firebase:", result);
+                }
             }
             console.log("Todas as referências de mídia salvas no Firebase.");
         }
@@ -1021,16 +1026,10 @@ const getGeminiSuggestions = async (pedidoAtual, itensAtuais) => {
                  throw new Error("Resposta bloqueada por filtros de segurança.");
              } else if (finishReason === "RECITATION") {
                   throw new Error("Resposta bloqueada por recitação.");
-} else {
-	                  // Se for MAX_TOKENS, tentamos um modelo mais eficiente (nano)
-	                  if (finishReason === "MAX_TOKENS" && GEMINI_MODEL !== "gemini-2.5-nano") {
-	                      console.warn("MAX_TOKENS detectado. Sugerindo fallback para gemini-2.5-nano.");
-	                      // O erro será lançado e tratado no catch, mas com uma mensagem específica
-	                      throw new Error(`Resposta incompleta (MAX_TOKENS). Tente com um modelo mais eficiente.`);
-	                  }
-	                  throw new Error(`Resposta incompleta (${finishReason})`);
-	             }
-	        }
+             } else {
+                  throw new Error(`Resposta incompleta (${finishReason})`);
+             }
+        }
 
 
         if (suggestionText) {

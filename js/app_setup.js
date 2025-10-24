@@ -25,7 +25,7 @@ const CLOUDINARY_UPLOAD_PRESET = "eletroia_unsigned";
 // SUBSTITUA A LINHA ABAIXO PELA SUA CHAVE REAL DA API DO GEMINI (Google AI Studio)
 const GEMINI_API_KEY = "AIzaSyClCOFugk4oeE_cn05Zpampe7YFlgc_8Cs"; // <<<<<<<<<<<<<<< SUBSTITUA AQUI
 // -----------------------------------------------------------------------------
-const GEMINI_MODEL = "gemini-2.5-flash"; // Modelo atualizado para gemini-2.5-flash
+const GEMINI_MODEL = "gemini-2.5-nano"; // Modelo alterado para nano, mais eficiente em tokens e mais rápido
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 /* ==================================================================
 FIM DA SEÇÃO DE CREDENCIAIS
@@ -78,11 +78,7 @@ const uploadFileToCloudinary = async (file) => {
     const data = await response.json();
     showNotification(`Arquivo '${file.name}' enviado com sucesso!`, 'success');
     console.log("Cloudinary upload response:", data); // Log para depuração
-    return {
-        url: data.secure_url, // URL segura
-        name: file.name,     // Nome original do arquivo
-        type: file.type      // Tipo MIME do arquivo
-    }; // Retorna o objeto de mídia completo
+    return data.secure_url; // Retorna a URL segura
   } catch (error) {
     console.error("Erro detalhado no uploadFileToCloudinary:", error);
     showNotification(`Erro no upload de ${file.name}: ${error.message}`, 'error');
