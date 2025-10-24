@@ -973,7 +973,7 @@ const getGeminiSuggestions = async (pedidoAtual, itensAtuais) => {
                 contents: [{ role: "user", parts: [{ text: prompt }] }], // Corrigido para o formato v1
                 // Safety settings (adjust if blocking valid responses)
                 safetySettings: [ { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" }, { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" }, { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" }, { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" } ],
-                generationConfig: { temperature: 0.6, maxOutputTokens: 150 } // Control creativity/length
+                generationConfig: { temperature: 0.6, maxOutputTokens: 512 } // Control creativity/length (Aumentado para evitar MAX_TOKENS)
             })
         });
 
