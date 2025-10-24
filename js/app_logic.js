@@ -715,7 +715,10 @@ const renderMediaGallery = (pedido) => {
     // Get media items from order data, convert Firebase object to array
     const media = pedido.media || {};
     // Add Firebase key as 'key' property to each media item
-    const mediaEntries = Object.entries(media).map(([key, item]) => ({ ...item, key: key }));
+    // Ensure 'item' is an object before spreading, as Firebase might return null/undefined if the node was deleted
+    const mediaEntries = Object.entries(media)
+        .filter(([, item]) => item && typeof item === 'object') // Filter out invalid entries
+        .map(([key, item]) => ({ ...item, key: key }));
     // Update the global array used by the lightbox
     lightboxMedia = mediaEntries;
     console.log(`Renderizando galeria com ${mediaEntries.length} itens de mídia.`);
@@ -958,10 +961,25 @@ const getGeminiSuggestions = async (pedidoAtual, itensAtuais) => {
         .flatMap(p => p.itens||[]) // Get all items from those orders
         .map(i => `${i.quantity || 1}${i.unit || 'un'} ${i.name}`) // Format them
         .join(', ') || "Nenhum histórico recente encontrado";
+    
+    // Check if there's enough info for a detailed prompt (e.g., at least one item in the current order)
+    const hasItems = (Array.isArray(itensAtuais)?itensAtuais:[]).length > 0;
+    
+    let prompt;
+    let maxTokens = 150; // Default to a smaller token limit for the fallback message
+    
+    if (hasItems) {
+        // --- Detailed Prompt (Original Logic) ---
+        // Detailed prompt providing context, current order, history, and desired output format
+        prompt = `Você é um assistente de vendas B2B especialista em materiais elétricos e de construção para uma distribuidora no Brasil. O cliente é "${nomeCliente}". O pedido ATUAL contém os seguintes itens: ${itensAtuaisFormatado}. O histórico RECENTE deste cliente (últimos 2 pedidos entregues) inclui: ${historicoItensFormatado}. Sua tarefa é gerar EXATAMENTE 2 sugestões CURTAS, OBJETIVAS e PRÁTICAS para o vendedor brasileiro: 1. Um item de cross-sell que complemente DIRETAMENTE um item do pedido ATUAL (ex: se tem cabo, sugerir conector). 2. Uma oportunidade de venda baseada no histórico (ex: item que ele comprava e parou, ou item comum que ele nunca comprou, como fita isolante). Use **negrito** para nomes de produtos. Formate a resposta como uma lista simples, cada sugestão em uma nova linha começando com "- ". Não inclua introduções ou despedidas, apenas as duas sugestões.`;
+        maxTokens = 1024; // Use the larger token limit for detailed response
+    } else {
+        // --- Fallback Prompt (New Logic) ---
+        // Short, professional, positive message for when there's no item in the order yet
+        prompt = `Você é um assistente de vendas B2B. O cliente é "${nomeCliente}", mas o pedido atual está vazio. Sua tarefa é gerar UMA única sugestão CURTA, PROFISSIONAL e POSITIVA para o vendedor, focada em atendimento e prospecção inicial. Formate a resposta como uma frase única, sem **negrito** ou "- ". Exemplo: "Trate o cliente com excelência, entenda suas necessidades e dores para oferecer a solução ideal."`;
+        maxTokens = 150; // Keep the token limit low for the short, single-sentence response
+    }
 
-    // --- Construct the Prompt ---
-    // Detailed prompt providing context, current order, history, and desired output format
-    const prompt = `Você é um assistente de vendas B2B especialista em materiais elétricos e de construção para uma distribuidora no Brasil. O cliente é "${nomeCliente}". O pedido ATUAL contém os seguintes itens: ${itensAtuaisFormatado}. O histórico RECENTE deste cliente (últimos 2 pedidos entregues) inclui: ${historicoItensFormatado}. Sua tarefa é gerar EXATAMENTE 2 sugestões CURTAS, OBJETIVAS e PRÁTICAS para o vendedor brasileiro: 1. Um item de cross-sell que complemente DIRETAMENTE um item do pedido ATUAL (ex: se tem cabo, sugerir conector). 2. Uma oportunidade de venda baseada no histórico (ex: item que ele comprava e parou, ou item comum que ele nunca comprou, como fita isolante). Use **negrito** para nomes de produtos. Formate a resposta como uma lista simples, cada sugestão em uma nova linha começando com "- ". Não inclua introduções ou despedidas, apenas as duas sugestões.`;
      console.log("Prompt para Gemini:", prompt); // Log prompt for debugging
 
     // --- API Call ---
@@ -972,8 +990,8 @@ const getGeminiSuggestions = async (pedidoAtual, itensAtuais) => {
             body: JSON.stringify({
                 contents: [{ role: "user", parts: [{ text: prompt }] }], // Corrigido para o formato v1
                 // Safety settings (adjust if blocking valid responses)
-                safetySettings: [ { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" }, { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" }, { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" }, { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" } ],
-                generationConfig: { temperature: 0.6, maxOutputTokens: 1024 } // Control creativity/length (Aumentado para evitar MAX_TOKENS)
+                safetySettings: [ { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" }, { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" }, { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" } ], // Removido DANGEROUS_CONTENT para evitar bloqueios excessivos
+                generationConfig: { temperature: 0.6, maxOutputTokens: maxTokens, stopSequences: ["\n\n"] } // Adicionado stopSequences e maxTokens dinâmico
             })
         });
 
