@@ -78,7 +78,11 @@ const uploadFileToCloudinary = async (file) => {
     const data = await response.json();
     showNotification(`Arquivo '${file.name}' enviado com sucesso!`, 'success');
     console.log("Cloudinary upload response:", data); // Log para depuração
-    return data.secure_url; // Retorna a URL segura
+    return {
+        url: data.secure_url, // URL segura
+        name: file.name,     // Nome original do arquivo
+        type: file.type      // Tipo MIME do arquivo
+    }; // Retorna o objeto de mídia completo
   } catch (error) {
     console.error("Erro detalhado no uploadFileToCloudinary:", error);
     showNotification(`Erro no upload de ${file.name}: ${error.message}`, 'error');
