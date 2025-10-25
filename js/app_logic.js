@@ -258,35 +258,35 @@ const saveLogAndUploads = async (e) => {
             console.log(`Iniciando upload de ${filesToUpload.length} arquivo(s) para Cloudinary...`);
 
             // Map each file to an upload promise
-            const uploadPromises = filesToUpload.map(async (file, index) => {
-                console.log(`[${index + 1}/${filesToUpload.length}] Enviando ${file.name}...`);
-                const url = await uploadFileToCloudinary(file); // Upload via helper function
-                console.log(`[${index + 1}/${filesToUpload.length}] Upload de ${file.name} concluído. URL: ${url}`);
-                // Return the object structure to be saved in Firebase 'media' node
-                return {
-                    type: file.type || 'application/octet-stream', // File MIME type
-                    url: url, // Secure URL from Cloudinary
-                    name: file.name, // Original file name
-                    timestamp // Timestamp of upload completion (approx)
-                };
-            });
+            const mediaPromises = filesToUpload.map(file =>
+                // CORREÇÃO: Passa o objeto 'file' para a Promise
+                uploadFileToCloudinary(file).then(url => ({ 
+                    // O código usa .then() para tratar a Promise, mas precisa
+                    // reconstruir o objeto de mídia usando as propriedades do 'file' original 
+                    // e a 'url' retornada (que é uma string)
+                    type: file.type || 'application/octet-stream', // Usa o tipo do File API
+                    url: url, // Usa a URL retornada pelo Cloudinary
+                    name: file.name, // Usa o nome do File API
+                    timestamp: timestamp 
+                }))
+            );
 
             // Wait for all upload promises to resolve
-            const mediaResults = await Promise.all(uploadPromises);
+            const mediaResults = await Promise.all(mediaPromises);
             console.log("Todos os uploads para Cloudinary concluídos. Resultados:", mediaResults);
 
             // --- Step 3: Save media references to Firebase ---
             const mediaRef = db.ref(`pedidos/${pedidoId}/media`);
             console.log(`Salvando ${mediaResults.length} referências de mídia no Firebase em /pedidos/${pedidoId}/media ...`);
-            for (const result of mediaResults) {
-                // IMPORTANT: Only push to Firebase if the result is a valid object (not a simple URL string, which era o erro anterior)
-                if (result && typeof result === 'object' && result.url) {
-                    await mediaRef.push().set(result); // Add each media object under the 'media' node
+            mediaResults.forEach(result => { // Usa forEach para salvar referências de mídia de forma assíncrona
+                // A validação agora checa se result e result.url existem
+                if (result && result.url) { // Verifica a validade antes de salvar
+                    mediaRef.push().set(result); // Add each media object under the 'media' node
                     console.log(`Referência para ${result.name} salva no Firebase.`);
                 } else {
                     console.warn("Resultado de upload inválido ou incompleto, ignorando salvamento no Firebase:", result);
                 }
-            }
+            });
             console.log("Todas as referências de mídia salvas no Firebase.");
         }
 
@@ -547,19 +547,14 @@ const renderDetailsItems = () => {
 
     // Generate HTML for each item row
     container.innerHTML = itens.map((item, index) => `
-        <div class="item-detail-row" data-index="${index}"> <!-- Store index on the row -->
-            <div class="item-info">
-                <!-- Display item name and price -->
+        <div class="item-detail-row" data-index="${index}"> <div class="item-info">
                 <span>${item.name || 'Item sem nome'} (${formatCurrency(item.price)})</span>
             </div>
             <div class="item-controls">
-                <!-- Label (Visually hidden but good for accessibility) -->
                 <label for="qty-${index}" class="text-xs mr-1 sr-only">Quantidade:</label>
-                <!-- Quantity Input -->
                 <input type="number" id="qty-${index}" value="${item.quantity}" min="1" step="1"
                        class="item-quantity-input"
                        data-index="${index}" aria-label="Quantidade para ${item.name || 'item'}">
-                <!-- Remove Button -->
                 <button type="button" class="remove-item-btn"
                         data-index="${index}" title="Remover ${item.name || 'item'}">&times;</button>
             </div>
@@ -996,7 +991,7 @@ const getGeminiSuggestions = async (pedidoAtual, itensAtuais) => {
                 contents: [{ role: "user", parts: [{ text: prompt }] }], // Corrigido para o formato v1
                 // Safety settings (adjust if blocking valid responses)
                 safetySettings: [ { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" }, { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" }, { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" } ], // Removido DANGEROUS_CONTENT para evitar bloqueios excessivos
-                generationConfig: { temperature: 0.6, maxOutputTokens: maxTokens, stopSequences: ["\n\n"] } // Adicionado stopSequences e maxTokens dinâmico
+                generationConfig: { temperature: 0.6, stopSequences: ["\n\n"] } // Removido maxOutputTokens para usar o padrão da API e evitar erro MAX_TOKENS.
             })
         });
 
